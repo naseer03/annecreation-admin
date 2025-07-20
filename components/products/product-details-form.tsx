@@ -142,6 +142,12 @@ export function ProductDetailsForm({
     product?.machineFormatPrices ||
       machineFormats.reduce((acc, format) => ({ ...acc, [format]: "" }), {})
   );
+
+  // Sync local machineFormatPrices with parent formData
+  useEffect(() => {
+    onChange("machineFormatPrices", machineFormatPrices);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [machineFormatPrices]);
   const [selectedMachineFormats, setSelectedMachineFormats] = useState<
     string[]
   >(product?.selectedMachineFormats || []);
@@ -260,6 +266,7 @@ export function ProductDetailsForm({
         updatedPrices[format] = value;
       });
       setMachineFormatPrices(updatedPrices);
+      // onChange will be triggered by useEffect above
     }
   };
 
@@ -278,8 +285,15 @@ export function ProductDetailsForm({
         updatedPrices[format] = globalPrice;
       });
       setMachineFormatPrices(updatedPrices);
+    } else {
+      // When unchecking, deselect all machine formats and clear their prices
+      setSelectedMachineFormats([]);
+      const clearedPrices = { ...machineFormatPrices };
+      machineFormats.forEach((format) => {
+        clearedPrices[format] = "";
+      });
+      setMachineFormatPrices(clearedPrices);
     }
-    // When unchecking, we don't change the selections to allow users to keep their choices
   };
 
   const toggleMachineFormat = (format: string) => {
@@ -293,10 +307,12 @@ export function ProductDetailsForm({
   };
 
   const handleMachineFormatPriceChange = (format: string, value: string) => {
-    setMachineFormatPrices({
+    const updatedPrices = {
       ...machineFormatPrices,
       [format]: value,
-    });
+    };
+    setMachineFormatPrices(updatedPrices);
+    // onChange will be triggered by useEffect above
   };
 
   // Check if categories exist and have length
@@ -554,10 +570,11 @@ export function ProductDetailsForm({
             <Textarea
               id="design-spec"
               placeholder="Enter design specifications"
+              value={formData.designSpec || ""}
+              onChange={e => onChange("designSpec", e.target.value)}
               className={`min-h-[120px] resize-y border-gray-300 ${
                 validationErrors?.designSpec === false ? "border-red-500" : ""
               }`}
-              defaultValue={product?.designSpec || ""}
             />
             {validationErrors?.designSpec === false && (
               <p className="text-sm text-red-500">
@@ -574,7 +591,8 @@ export function ProductDetailsForm({
               id="stitches"
               type="number"
               placeholder="Number of stitches"
-              defaultValue={product?.stitches || ""}
+              value={formData.stitches?.toString() || ""}
+              onChange={e => onChange("stitches", parseInt(e.target.value) || 0)}
               className={`border-gray-300 ${
                 validationErrors?.stitches === false ? "border-red-500" : ""
               }`}
@@ -587,7 +605,7 @@ export function ProductDetailsForm({
           </div>
         </div>
 
-        <div className="grid gap-2">
+        {/* <div className="grid gap-2">
           <Label htmlFor="dimensions" className="text-gray-700">
             Dimensions (Area / Height / Width){" "}
             <span className="text-red-500">*</span>
@@ -614,7 +632,7 @@ export function ProductDetailsForm({
           <p className="text-xs text-gray-500">
             Enter dimensions in format: Area / Height / Width
           </p>
-        </div>
+        </div> */}
 
         <div className="grid gap-2">
           <Label htmlFor="color-needles" className="text-gray-700">
@@ -623,7 +641,8 @@ export function ProductDetailsForm({
           <Input
             id="color-needles"
             placeholder="Colour / Needles information"
-            defaultValue={product?.colorNeedles || ""}
+            value={formData.colorNeedles || ""}
+            onChange={e => onChange("colorNeedles", e.target.value)}
             className="border-gray-300"
           />
         </div>
@@ -709,6 +728,20 @@ export function ProductDetailsForm({
                   type="file"
                   className="border-gray-300 file:mr-4 file:rounded-md file:border-0 file:bg-[#ffb729] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-[#311807] hover:file:bg-[#ffb729]/90"
                   disabled={!selectedMachineFormats.includes(format)}
+                  accept=".zip"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file && file.type !== "application/zip" && !file.name.endsWith(".zip")) {
+                      alert("Only zip files are allowed.");
+                      e.target.value = "";
+                      return;
+                    }
+                    // Update machineFormatFiles in formData
+                    onChange("machineFormatFiles", {
+                      ...formData.machineFormatFiles,
+                      [format]: file || null,
+                    });
+                  }}
                 />
               </div>
             </div>

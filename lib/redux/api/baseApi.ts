@@ -1,6 +1,6 @@
 import { createApi, fetchBaseQuery, FetchBaseQueryError } from '@reduxjs/toolkit/query/react';
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://a6dc-122-175-61-73.ngrok-free.app';
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export const baseApi = createApi({
     reducerPath: 'api',
@@ -38,7 +38,8 @@ export const baseApi = createApi({
         'Users',
         'Analytics',
         'Marketing',
-        'Settings'
+        'Settings',
+        'Dashboard'
     ],
     endpoints: () => ({}),
 });

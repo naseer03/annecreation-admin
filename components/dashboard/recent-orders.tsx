@@ -1,56 +1,37 @@
+'use client'
 import { ArrowRightIcon, CheckCircle2, Clock, XCircle } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-
-const orders = [
-  {
-    id: "ORD-001",
-    customer: "Sarah Johnson",
-    date: "2023-05-15",
-    amount: "₹129.99",
-    status: "Completed",
-  },
-  {
-    id: "ORD-002",
-    customer: "Michael Brown",
-    date: "2023-05-14",
-    amount: "₹59.99",
-    status: "Processing",
-  },
-  {
-    id: "ORD-003",
-    customer: "Emily Davis",
-    date: "2023-05-13",
-    amount: "₹89.99",
-    status: "Completed",
-  },
-  {
-    id: "ORD-004",
-    customer: "James Wilson",
-    date: "2023-05-12",
-    amount: "₹149.99",
-    status: "Cancelled",
-  },
-  {
-    id: "ORD-005",
-    customer: "Olivia Martinez",
-    date: "2023-05-11",
-    amount: "₹79.99",
-    status: "Processing",
-  },
-]
-
+import { useGetRecentOrdersQuery } from "@/lib/redux/api/dashboardApi"
+import { useRouter } from "next/navigation"
 export function RecentOrders() {
+
+  const router = useRouter();
+  const { data, isLoading } = useGetRecentOrdersQuery({ limit: 10 });
+  const orders = data?.orders || [];
+
+  function getStatusLabel(status_id: number) {
+    // Example mapping, adjust as needed
+    if (status_id === 1) return { label: "Processing", color: "yellow" };
+    if (status_id === 5) return { label: "Completed", color: "green" };
+    return { label: "Cancelled", color: "red" };
+  }
+
   return (
     <Card className="border border-gray-200 bg-white shadow-md">
       <CardHeader className="flex flex-row items-center justify-between">
         <div>
           <CardTitle className="text-xl font-bold text-gray-900">Recent Orders</CardTitle>
-          <CardDescription className="text-gray-500">You have {orders.length} orders this month</CardDescription>
+          <CardDescription className="text-gray-500">You have {orders.length} recent orders</CardDescription>
         </div>
-        <Button variant="outline" size="sm" className="gap-1 border border-gray-300">
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-1 border border-gray-300"
+          onClick={() => router.push("/dashboard/orders")}
+        >
           View All
           <ArrowRightIcon className="h-4 w-4" />
         </Button>
@@ -69,45 +50,58 @@ export function RecentOrders() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {orders.map((order) => (
-                <TableRow key={order.id} className="hover:bg-gray-50">
-                  <TableCell className="font-medium text-gray-900">{order.id}</TableCell>
-                  <TableCell className="text-gray-700">{order.customer}</TableCell>
-                  <TableCell className="text-gray-700">{order.date}</TableCell>
-                  <TableCell className="font-medium text-gray-900">{order.amount}</TableCell>
-                  <TableCell>
-                    {order.status === "Completed" ? (
-                      <div className="flex w-24 items-center justify-center gap-1 rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-800">
-                        <CheckCircle2 className="h-3.5 w-3.5" />
-                        <span>{order.status}</span>
-                      </div>
-                    ) : order.status === "Processing" ? (
-                      <div className="flex w-24 items-center justify-center gap-1 rounded-full bg-yellow-100 px-2.5 py-1 text-xs font-medium text-yellow-800">
-                        <Clock className="h-3.5 w-3.5" />
-                        <span>{order.status}</span>
-                      </div>
-                    ) : (
-                      <div className="flex w-24 items-center justify-center gap-1 rounded-full bg-red-100 px-2.5 py-1 text-xs font-medium text-red-800">
-                        <XCircle className="h-3.5 w-3.5" />
-                        <span>{order.status}</span>
-                      </div>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
-                    >
-                      View
-                    </Button>
-                  </TableCell>
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center text-gray-400">Loading...</TableCell>
                 </TableRow>
-              ))}
+              ) : orders.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center text-gray-400">No data available</TableCell>
+                </TableRow>
+              ) : (
+                orders.map((order) => {
+                  const status = getStatusLabel(order.status_id);
+                  return (
+                    <TableRow key={order.order_id} className="hover:bg-gray-50">
+                      <TableCell className="font-medium text-gray-900">{order.order_id}</TableCell>
+                      <TableCell className="text-gray-700">{order.customer.name}</TableCell>
+                      <TableCell className="text-gray-700">{new Date(order.date_added).toLocaleDateString()}</TableCell>
+                      <TableCell className="font-medium text-gray-900">₹{order.total}</TableCell>
+                      <TableCell>
+                        {status.color === "green" ? (
+                          <div className="flex w-24 items-center justify-center gap-1 rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-800">
+                            <CheckCircle2 className="h-3.5 w-3.5" />
+                            <span>{status.label}</span>
+                          </div>
+                        ) : status.color === "yellow" ? (
+                          <div className="flex w-24 items-center justify-center gap-1 rounded-full bg-yellow-100 px-2.5 py-1 text-xs font-medium text-yellow-800">
+                            <Clock className="h-3.5 w-3.5" />
+                            <span>{status.label}</span>
+                          </div>
+                        ) : (
+                          <div className="flex w-24 items-center justify-center gap-1 rounded-full bg-red-100 px-2.5 py-1 text-xs font-medium text-red-800">
+                            <XCircle className="h-3.5 w-3.5" />
+                            <span>{status.label}</span>
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+                        >
+                          View
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
             </TableBody>
           </Table>
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }

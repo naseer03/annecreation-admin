@@ -7,7 +7,14 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   images: {
-    unoptimized: true,
+    remotePatterns: [
+      {
+        protocol: 'http',
+        hostname: '89.116.32.45',
+        port: '5999',
+        pathname: '/**',
+      },
+    ],
   },
 }
 
