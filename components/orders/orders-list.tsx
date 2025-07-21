@@ -1,5 +1,4 @@
 "use client"
-
 import { useState, useMemo } from "react"
 import {
   ArrowDownIcon,
@@ -33,6 +32,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { OrderDialog } from "./order-dialog"
+import { useGetRecentOrdersQuery } from "@/lib/redux/api/ordersApi"
 
 // Define the order data structure
 interface Order {
@@ -47,151 +47,56 @@ interface Order {
   dateModified: string
 }
 
-// Sample order data
-const ordersData: Order[] = [
-  {
-    id: "ORD-2023-1001",
-    customer: "Rahul Sharma",
-    email: "rahul.sharma@example.com",
-    phone: "+91 98765 43210",
-    product: "Butterfly Design Pattern",
-    status: "Delivered",
-    total: 60,
-    device: "Desktop",
-    dateModified: "2023-05-15",
-  },
-  {
-    id: "ORD-2023-1002",
-    customer: "Priya Patel",
-    email: "priya.patel@example.com",
-    phone: "+91 87654 32109",
-    product: "Leaf Pattern Collection",
-    status: "Processing",
-    total: 75,
-    device: "Mobile",
-    dateModified: "2023-05-16",
-  },
-  {
-    id: "ORD-2023-1003",
-    customer: "Amit Kumar",
-    email: "amit.kumar@example.com",
-    phone: "+91 76543 21098",
-    product: "Boat Neck Design",
-    status: "Shipped",
-    total: 90,
-    device: "Desktop",
-    dateModified: "2023-05-17",
-  },
-  {
-    id: "ORD-2023-1004",
-    customer: "Sneha Gupta",
-    email: "sneha.gupta@example.com",
-    phone: "+91 65432 10987",
-    product: "Bridal Collection Pattern",
-    status: "Pending",
-    total: 120,
-    device: "Mobile",
-    dateModified: "2023-05-18",
-  },
-  {
-    id: "ORD-2023-1005",
-    customer: "Vikram Singh",
-    email: "vikram.singh@example.com",
-    phone: "+91 54321 09876",
-    product: "Cross Stitch Pattern",
-    status: "Delivered",
-    total: 65,
-    device: "Tablet",
-    dateModified: "2023-05-19",
-  },
-  {
-    id: "ORD-2023-1006",
-    customer: "Neha Verma",
-    email: "neha.verma@example.com",
-    phone: "+91 43210 98765",
-    product: "Peacock Design",
-    status: "Cancelled",
-    total: 85,
-    device: "Desktop",
-    dateModified: "2023-05-20",
-  },
-  {
-    id: "ORD-2023-1007",
-    customer: "Rajesh Khanna",
-    email: "rajesh.khanna@example.com",
-    phone: "+91 32109 87654",
-    product: "Pot Neck Pattern",
-    status: "Delivered",
-    total: 70,
-    device: "Mobile",
-    dateModified: "2023-05-21",
-  },
-  {
-    id: "ORD-2023-1008",
-    customer: "Ananya Mishra",
-    email: "ananya.mishra@example.com",
-    phone: "+91 21098 76543",
-    product: "Chain Stitch Collection",
-    status: "Processing",
-    total: 80,
-    device: "Desktop",
-    dateModified: "2023-05-22",
-  },
-  {
-    id: "ORD-2023-1009",
-    customer: "Sanjay Joshi",
-    email: "sanjay.joshi@example.com",
-    phone: "+91 10987 65432",
-    product: "Elephant Design",
-    status: "Shipped",
-    total: 95,
-    device: "Tablet",
-    dateModified: "2023-05-23",
-  },
-  {
-    id: "ORD-2023-1010",
-    customer: "Meera Reddy",
-    email: "meera.reddy@example.com",
-    phone: "+91 09876 54321",
-    product: "Kids Neck Pattern",
-    status: "Delivered",
-    total: 60,
-    device: "Mobile",
-    dateModified: "2023-05-24",
-  },
-  {
-    id: "ORD-2023-1011",
-    customer: "Arjun Nair",
-    email: "arjun.nair@example.com",
-    phone: "+91 98765 12345",
-    product: "Cutwork Design",
-    status: "Pending",
-    total: 110,
-    device: "Desktop",
-    dateModified: "2023-05-25",
-  },
-  {
-    id: "ORD-2023-1012",
-    customer: "Kavita Menon",
-    email: "kavita.menon@example.com",
-    phone: "+91 87654 23456",
-    product: "Creative God Design",
-    status: "Processing",
-    total: 130,
-    device: "Mobile",
-    dateModified: "2023-05-26",
-  },
-]
+// Helper to map status_id to status string
+const mapStatus = (status_id: number): Order["status"] => {
+  switch (status_id) {
+    case 1:
+      return "Processing";
+    case 2:
+      return "Pending";
+    case 3:
+      return "Shipped";
+    case 4:
+      return "Cancelled";
+    case 5:
+      return "Delivered";
+    default:
+      return "Pending";
+  }
+};
 
-// Get unique statuses and devices for filtering
-const statuses = Array.from(new Set(ordersData.map((order) => order.status)))
-// Remove this line
-// const devices = Array.from(new Set(ordersData.map((order) => order.device)))
+
+  
 
 export function OrdersList() {
   // State for sorting
   const [sortField, setSortField] = useState<"id" | "customer" | "total" | "dateModified">("dateModified")
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc")
+  // Fetch orders from API
+  const { data, isLoading, isError } = useGetRecentOrdersQuery({ limit: 100 });
+
+  // Map API response to local Order type
+  const ordersData: Order[] = Array.isArray(data?.orders)
+    ? data.orders.map((order: any) => ({
+        id: order.order_id ? `ORD-${order.order_id}` : "",
+        customer: order.customer?.name || "",
+        email: order.customer?.email || "",
+        phone: order.customer?.telephone || "",
+        product: Array.isArray(order.products)
+          ? order.products.map((p: any) => p.name).join(", ")
+          : "",
+        status: mapStatus(order.status_id),
+        total: order.total || 0,
+        device: "Desktop", // Set device if available in API, else default
+        dateModified: order.date_added
+          ? new Date(order.date_added).toLocaleDateString()
+          : "",
+      })
+    )
+    : [];
+
+  // Get unique statuses for filtering
+  const statuses = Array.from(new Set(ordersData.map((order) => order.status)));
 
   // State for filtering
   const [searchQuery, setSearchQuery] = useState("")
@@ -221,13 +126,13 @@ export function OrdersList() {
         // Filter by search query based on selected search field
         if (searchQuery) {
           if (searchField === "id") {
-            return order.id.toLowerCase().includes(searchQuery.toLowerCase())
+            return order.id.toLowerCase().includes(searchQuery.toLowerCase());
           } else if (searchField === "customer") {
-            return order.customer.toLowerCase().includes(searchQuery.toLowerCase())
+            return order.customer.toLowerCase().includes(searchQuery.toLowerCase());
           } else if (searchField === "email") {
-            return order.email.toLowerCase().includes(searchQuery.toLowerCase())
+            return order.email.toLowerCase().includes(searchQuery.toLowerCase());
           } else if (searchField === "phone") {
-            return order.phone.toLowerCase().includes(searchQuery.toLowerCase())
+            return order.phone.toLowerCase().includes(searchQuery.toLowerCase());
           } else {
             // Search in all fields
             return (
@@ -235,32 +140,27 @@ export function OrdersList() {
               order.customer.toLowerCase().includes(searchQuery.toLowerCase()) ||
               order.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
               order.phone.toLowerCase().includes(searchQuery.toLowerCase())
-            )
+            );
           }
         }
-        return true
+        return true;
       })
-      .filter(
-        (order) =>
-          // Filter by selected statuses
-          selectedStatuses.includes(order.status),
-        // Remove this line: && selectedDevices.includes(order.device)
-      )
+      .filter((order) => selectedStatuses.includes(order.status))
       .sort((a, b) => {
         // Sort by selected field and direction
         if (sortField === "id") {
-          return sortDirection === "asc" ? a.id.localeCompare(b.id) : b.id.localeCompare(a.id)
+          return sortDirection === "asc" ? a.id.localeCompare(b.id) : b.id.localeCompare(a.id);
         } else if (sortField === "customer") {
-          return sortDirection === "asc" ? a.customer.localeCompare(b.customer) : b.customer.localeCompare(a.customer)
+          return sortDirection === "asc" ? a.customer.localeCompare(b.customer) : b.customer.localeCompare(a.customer);
         } else if (sortField === "total") {
-          return sortDirection === "asc" ? a.total - b.total : b.total - a.total
+          return sortDirection === "asc" ? a.total - b.total : b.total - a.total;
         } else {
           return sortDirection === "asc"
             ? a.dateModified.localeCompare(b.dateModified)
-            : b.dateModified.localeCompare(a.dateModified)
+            : b.dateModified.localeCompare(a.dateModified);
         }
-      })
-  }, [ordersData, sortField, sortDirection, searchQuery, searchField, selectedStatuses])
+      });
+  }, [ordersData, sortField, sortDirection, searchQuery, searchField, selectedStatuses]);
 
   // Calculate pagination
   const totalPages = Math.ceil(filteredAndSortedOrders.length / itemsPerPage)
@@ -307,7 +207,13 @@ export function OrdersList() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <CardTitle className="text-xl font-bold text-gray-900">All Orders</CardTitle>
-            <CardDescription className="text-gray-500">{filteredAndSortedOrders.length} orders found</CardDescription>
+            <CardDescription className="text-gray-500">
+              {isLoading
+                ? "Loading orders..."
+                : isError
+                ? "Failed to load orders."
+                : `${filteredAndSortedOrders.length} orders found`}
+            </CardDescription>
           </div>
           <div className="flex flex-wrap gap-2">
             <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
@@ -334,6 +240,7 @@ export function OrdersList() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-8 border-gray-300 w-full"
+                  disabled={isLoading}
                 />
                 {searchQuery && (
                   <Button
@@ -374,34 +281,6 @@ export function OrdersList() {
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
-
-            {/* Remove this dropdown menu */}
-            {/* <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="gap-1 border-gray-300">
-                  <FilterIcon className="h-4 w-4" />
-                  Device
-                  {selectedDevices.length < devices.length && (
-                    <Badge className="ml-1 bg-[#ffb729] text-[#311807] hover:bg-[#ffb729]/80">
-                      {selectedDevices.length}
-                    </Badge>
-                  )}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>Filter by Device</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                {devices.map((device) => (
-                  <DropdownMenuCheckboxItem
-                    key={device}
-                    checked={selectedDevices.includes(device)}
-                    onCheckedChange={() => toggleDevice(device)}
-                  >
-                    {device}
-                  </DropdownMenuCheckboxItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu> */}
 
             <Button variant="outline" className="border-gray-300" onClick={clearFilters}>
               Clear Filters
@@ -482,7 +361,19 @@ export function OrdersList() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {paginatedOrders.length > 0 ? (
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={9} className="h-24 text-center">
+                    Loading orders...
+                  </TableCell>
+                </TableRow>
+              ) : isError ? (
+                <TableRow>
+                  <TableCell colSpan={9} className="h-24 text-center text-red-600">
+                    Failed to load orders.
+                  </TableCell>
+                </TableRow>
+              ) : paginatedOrders.length > 0 ? (
                 paginatedOrders.map((order) => (
                   <TableRow key={order.id} className="hover:bg-gray-50">
                     <TableCell className="font-medium text-gray-900">{order.id}</TableCell>
@@ -561,8 +452,8 @@ export function OrdersList() {
             <Select
               value={itemsPerPage.toString()}
               onValueChange={(value) => {
-                setItemsPerPage(Number(value))
-                setCurrentPage(1)
+                setItemsPerPage(Number(value));
+                setCurrentPage(1);
               }}
             >
               <SelectTrigger className="h-8 w-[70px] border-gray-300">
@@ -624,5 +515,5 @@ export function OrdersList() {
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }
