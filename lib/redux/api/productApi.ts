@@ -2,15 +2,57 @@ import { baseApi } from './baseApi';
 
 // Define product interface to match API response
 export interface Product {
+    _id: string;
     product_id: number;
-    name: string;
     model: string;
+    sku: string;
     price: number;
-    image?: string;
     quantity: number;
     status: boolean;
-    manufacturer_id: number;
+    categories: number[];
+    weight?: number;
+    dimensions?: {
+        width: number;
+        height: number;
+        length: number;
+    };
+    descriptions: Array<{
+        language_id: number;
+        name: string;
+        description: string;
+        meta_title?: string;
+        meta_description?: string;
+        meta_keyword?: string;
+    }>;
     date_added: string;
+    date_modified?: string;
+    __v?: number;
+    additional_images?: Array<{
+        product_image_id: number;
+        image: string;
+        sort_order: number;
+        _id: string;
+    }>;
+    attributes?: any[];
+    discounts?: any[];
+    downloads?: any[];
+    file_verification_status?: {
+        missing_files: any[];
+        total_files: number;
+        verified_files: number;
+    };
+    migration_notes?: any[];
+    minimum?: number;
+    options?: any[];
+    points?: number;
+    related_products?: any[];
+    shipping?: boolean;
+    sort_order?: number;
+    special_prices?: any[];
+    stores?: any[];
+    subtract?: boolean;
+    tags?: any[];
+    viewed?: number;
 }
 
 // Define pagination interface to match API response
@@ -44,29 +86,7 @@ export interface ProductFilters {
 }
 
 // Define product creation interface
-export interface ProductCreateRequest {
-    model: string;
-    sku: string;
-    price: number;
-    quantity: number;
-    status: boolean;
-    manufacturer_id?: number;
-    categories: number[];
-    weight?: number;
-    dimensions?: {
-        length: number;
-        width: number;
-        height: number;
-    };
-    descriptions: Array<{
-        language_id: number;
-        name: string;
-        description: string;
-        meta_title?: string;
-        meta_description?: string;
-        meta_keyword?: string;
-    }>;
-}
+export type ProductCreateRequest = FormData;
 
 // Define image upload interface
 export interface ProductImageUploadRequest {
@@ -117,13 +137,14 @@ export const productApi = baseApi.injectEndpoints({
 
         // Create new product
         createProduct: builder.mutation<Product, ProductCreateRequest>({
-            query: (product) => ({
+            query: (formData) => ({
                 url: '/api/products',
                 method: 'POST',
-                body: product,
+                body: formData,
+                formData: true,
                 credentials: 'include',
                 headers: {
-                    'Content-Type': 'application/json',
+                    'Content-Type': 'multipart/form-data',
                 },
             }),
             invalidatesTags: [{ type: 'Products', id: 'LIST' }],

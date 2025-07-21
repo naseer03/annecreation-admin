@@ -18,10 +18,11 @@ export function ProductImage({
   width = 40,
   height = 40,
 }: ProductImageProps) {
+  console.log("Rendering ProductImage with src:", src, "alt:", alt, "width:", width, "height:", height);
   const [error, setError] = useState(false);
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL;
+  // Always use backend URL for product images if not a full URL
+  const API_URL = process.env.NEXT_PUBLIC_API_URL
 
-  // If no image or error loading, show placeholder
   if (!src || error) {
     return (
       <Image
@@ -34,15 +35,26 @@ export function ProductImage({
     );
   }
 
-  // Format the full image URL based on the src value
-  const fullImageUrl = src.startsWith("http") ? src : `${baseUrl}${src}`;
-
   return (
-    <img
-      src={fullImageUrl}
+    <Image
+      src={`${API_URL}/${src}`}
       alt={alt}
-      className={`h-full w-full object-cover ${className}`}
+      width={width}
+      height={height}
+      className="object-cover transition-transform duration-200 ease-out"
+      style={{
+        userSelect: 'none'
+      }}
+      draggable={false}
       onError={() => setError(true)}
     />
+    // <img
+    //   src={fullImageUrl}
+    //   alt={alt}
+    //   width={width}
+    //   height={height}
+    //   className={`h-full w-full object-cover ${className}`}
+    //   onError={() => setError(true)}
+    // />
   );
 }

@@ -24,7 +24,9 @@ import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { useSidebar } from "@/contexts/sidebar-context"
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 const sidebarLinks = [
   {
@@ -177,17 +179,17 @@ export function DashboardSidebar() {
         {isExpanded ? (
           <Link href="/" className="flex items-center gap-2">
             <Image
-              src="https://annecreationshb.com/image/catalog/Group%205680@2x.png"
+              src={`${API_URL}/image/catalog/Group%205680@2x.png`}
               alt="Anne Creations Logo"
               width={120}
               height={40}
               className="h-8 w-auto"
-            />
+              />
           </Link>
         ) : (
           <div className="mx-auto">
             <Image
-              src="https://annecreationshb.com/image/catalog/Group%205680@2x.png"
+            src={`${API_URL}/image/catalog/Group%205680@2x.png`}
               alt="Anne Creations Logo"
               width={40}
               height={40}

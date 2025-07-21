@@ -22,7 +22,7 @@ export interface CategoryDescription {
 }
 
 export interface CategoryCreateRequest {
-    parent_id: number;
+    parent_id: string;
     image?: string;
     top: boolean;
     column: number;
@@ -99,20 +99,62 @@ export const categoryApi = baseApi.injectEndpoints({
             providesTags: (_, __, id) => [{ type: 'Categories', id: `path-${id}` }],
         }),
 
-        // Create category (admin)
-        createCategory: builder.mutation<Category, CategoryCreateRequest>({
-            query: (data) => ({
-                url: '/api/categories',
-                method: 'POST',
-                body: data,
-                credentials: 'include',
-            }),
+        // Create category (admin, supports FormData for file upload)
+        createCategory: builder.mutation<Category, FormData>({
+            query: (formData) => {
+                // Extract file names for category, banner, and thumbnail images
+                const categoryImageNames: string[] = [];
+                const bannerImageNames: string[] = [];
+                const thumbnailImageNames: string[] = [];
+                // FormData does not provide a direct way to get all files, so we rely on the keys used in append
+                // The frontend should append files with keys: categoryImages, bannerImages, thumbnailImages
+                formData.forEach((value, key) => {
+                    if (key === 'categoryImages' && value instanceof File) categoryImageNames.push(value.name);
+                    if (key === 'bannerImages' && value instanceof File) bannerImageNames.push(value.name);
+                    if (key === 'thumbnailImages' && value instanceof File) thumbnailImageNames.push(value.name);
+                });
+                // Add a JSON string with the image file names
+                formData.append('imageNames', JSON.stringify({
+                    categoryImages: categoryImageNames,
+                    bannerImages: bannerImageNames,
+                    thumbnailImages: thumbnailImageNames,
+                }));
+                return {
+                    url: '/api/categories',
+                    method: 'POST',
+                    body: formData,
+                    credentials: 'include',
+                };
+            },
             invalidatesTags: [
                 { type: 'Categories', id: 'LIST' },
                 { type: 'Categories', id: 'TREE' },
                 { type: 'Categories', id: 'TOP' }
             ],
         }),
+
+        // Update category (admin, supports FormData for file upload)
+        updateCategory: builder.mutation<Category, { id: number; body: any }>(
+            {
+                query: ({ id, body }) => {
+                    return {
+                        url: `/api/categories/${id}`,
+                        method: 'PUT',
+                        body,
+                        credentials: 'include',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                    };
+                },
+                invalidatesTags: (result, error, { id }) => [
+                    { type: 'Categories', id: 'LIST' },
+                    { type: 'Categories', id: 'TREE' },
+                    { type: 'Categories', id: 'TOP' },
+                    { type: 'Categories', id }
+                ],
+            }
+        ),
     }),
 });
 
@@ -125,4 +167,5 @@ export const {
     useGetCategoryByIdQuery,
     useGetCategoryPathQuery,
     useCreateCategoryMutation,
-} = categoryApi; 
+    useUpdateCategoryMutation,
+} = categoryApi;

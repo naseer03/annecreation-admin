@@ -2,7 +2,7 @@
 
 import type React from "react";
 
-import { useState } from "react";
+import { useState,useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ProductDetailsForm } from "./product-details-form";
+import { useGetProductByIdQuery } from "@/lib/redux/api/productApi";
 import { ProductSeoForm } from "./product-seo-form";
 import {
   useCreateProductMutation,
@@ -35,32 +36,28 @@ export interface ProductFormData {
   sku: string;
   price: number;
   quantity: number;
-  status: boolean;
-  categories: number[];
+  description: string;
   weight?: number;
   dimensions?: {
-    length: number;
-    width: number;
-    height: number;
+    length?: number;
+    width?: number;
+    height?: number;
   };
-  description: string;
   meta_title?: string;
   meta_description?: string;
   meta_keyword?: string;
   images: File[];
-  // SEO fields
-  metaTitle?: string;
-  metaDescription?: string;
-  metaKeywords?: string;
-  canonicalUrl?: string;
-  ogTitle?: string;
-  ogDescription?: string;
-  twitterTitle?: string;
-  twitterDescription?: string;
-  robotsMeta?: string;
-  customH1?: string;
-  structuredData?: string;
+  categories: number[];
+  designSpec?: string;
+  stitches?: number;
+  colorNeedles?: string;
+  machineFormatFiles?: Record<string, File | null>;
+  selectedMachineFormats?: string[];
+  machineFormatPrices?: Record<string, string>;
+  status: boolean;
+  // ...other fields as needed
 }
+  
 
 export function ProductDialog({
   children,
@@ -79,6 +76,36 @@ export function ProductDialog({
     description: "",
     images: [],
   });
+
+  // Fetch product details if in edit mode and product id is provided
+  const { data: fetchedProduct, isLoading: isProductLoading } =
+    useGetProductByIdQuery(
+      mode === "edit" && product?.product_id ? product.product_id.toString() : "",
+      { skip: mode !== "edit" || !product?.product_id }
+    );
+
+  // Pre-fill form when fetchedProduct changes
+  useEffect(() => {
+    if (mode === "edit" && fetchedProduct) {
+      setFormData({
+        name: fetchedProduct.descriptions?.[0]?.name || "",
+        model: fetchedProduct.model || "",
+        sku: fetchedProduct.sku || "",
+        price: fetchedProduct.price || 0,
+        quantity: fetchedProduct.quantity || 0,
+        status: fetchedProduct.status ?? true,
+        categories: fetchedProduct.categories || [],
+        description: fetchedProduct.descriptions?.[0]?.description || "",
+        images: [], // Images should be handled separately (e.g., preview URLs)
+        weight: typeof fetchedProduct.weight === "number" ? fetchedProduct.weight : undefined,
+        dimensions: fetchedProduct.dimensions || {
+          length: 0,
+          width: 0,
+          height: 0,
+        },
+      });
+    }
+  }, [mode, fetchedProduct]);
 
   const [createProduct, { isLoading: isCreating }] = useCreateProductMutation();
   const [uploadImages, { isLoading: isUploading }] =
@@ -110,9 +137,10 @@ export function ProductDialog({
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
+
     try {
-      // Format the product data for the API
-      const productData = {
+      // Build productData object with all non-file fields
+      const productData: any = {
         model: formData.model || `MODEL-${Date.now()}`,
         sku: formData.sku || `SKU-${Date.now()}`,
         price: formData.price,
@@ -131,79 +159,35 @@ export function ProductDialog({
             meta_keyword: formData.meta_keyword,
           },
         ],
+        designSpec: formData.designSpec,
+        stitches: formData.stitches,
+        colorNeedles: formData.colorNeedles,
+        machineFormatPrices: formData.machineFormatPrices
       };
 
-      // Step 1: Create the product
-      const result = await createProduct(productData).unwrap();
-      toast.success("Product created successfully!");
+      // Create FormData and append productData as JSON
+      const form = new FormData();
+      form.append("productData", JSON.stringify(productData));
 
-      // Step 2: Upload images if any
-      if (formData.images.length > 0 && result.product_id) {
-        try {
-          console.log(
-            `Starting image uploads for product ID ${result.product_id}`,
-            {
-              totalImages: formData.images.length,
-              productId: result.product_id,
-            }
-          );
-
-          // Upload each image individually with a sort order
-          for (let i = 0; i < formData.images.length; i++) {
-            const uploadFormData = new FormData();
-
-            // Log the image being uploaded
-            console.log(`Preparing image ${i + 1}:`, {
-              name: formData.images[i].name,
-              type: formData.images[i].type,
-              size: `${(formData.images[i].size / 1024).toFixed(2)} KB`,
-            });
-
-            // CRITICAL: The field name must be exactly 'image' as expected by the API
-            uploadFormData.append("image", formData.images[i]);
-            uploadFormData.append("sort_order", i.toString());
-
-            // Debug what's in the FormData (this is only for debugging)
-            for (const pair of uploadFormData.entries()) {
-              console.log(
-                `FormData contains: ${pair[0]}: ${
-                  pair[1] instanceof File ? `File: ${pair[1].name}` : pair[1]
-                }`
-              );
-            }
-
-            console.log(
-              `Sending upload request ${i + 1}/${formData.images.length}`
-            );
-
-            try {
-              const uploadResult = await uploadImages({
-                id: result.product_id.toString(),
-                formData: uploadFormData,
-              }).unwrap();
-
-              console.log(`Image upload ${i + 1} success:`, uploadResult);
-            } catch (singleImageError: any) {
-              console.error(`Error uploading image ${i + 1}:`, {
-                error: singleImageError,
-                message: singleImageError?.data?.message || "Unknown error",
-                status: singleImageError?.status,
-              });
-            }
-          }
-
-          toast.success("Product images uploaded successfully!");
-        } catch (imageError: any) {
-          console.error("Failed to upload images:", {
-            error: imageError,
-            message: imageError?.data?.message || "Unknown error",
-            status: imageError?.status,
-          });
-          toast.error(
-            "Product created but image upload failed. You can add images later."
-          );
-        }
+      // Images
+      if (formData.images && formData.images.length > 0) {
+        formData.images.forEach((file, idx) => {
+          form.append(`image_${idx}`, file);
+        });
       }
+
+      // Machine format files
+      if (formData.machineFormatFiles) {
+        Object.entries(formData.machineFormatFiles).forEach(([format, file]) => {
+          if (file) {
+            form.append(`machineFormatFile_${format}`, file);
+          }
+        });
+      }
+
+      // Send FormData to API
+      const result = await createProduct(form).unwrap();
+      toast.success("Product created successfully!");
 
       // Close the dialog and reset form
       setOpen(false);
@@ -217,6 +201,7 @@ export function ProductDialog({
         categories: [],
         description: "",
         images: [],
+        machineFormatFiles: {},
       });
     } catch (error) {
       console.error("Failed to create product:", error);
@@ -230,11 +215,13 @@ export function ProductDialog({
       <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-xl">
-            {mode === "create" ? "Add New Product" : "Edit Product"}
+            {mode === "create" ? "Add New Product" : isProductLoading ? "Loading..." : "Edit Product"}
           </DialogTitle>
           <DialogDescription>
             {mode === "create"
               ? "Create a new product for your store."
+              : isProductLoading
+              ? "Fetching product details..."
               : "Update the details of this product."}
           </DialogDescription>
         </DialogHeader>

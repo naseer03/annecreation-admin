@@ -6,12 +6,58 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
+import { CategoryFormData } from "./category-dialog"
+import { CategoryImageUpload } from "./category-image-upload"
 
 interface CategoryDetailsFormProps {
-  category?: any
+  formData: CategoryFormData;
+  onFormChange: (id: keyof CategoryFormData, value: any) => void;
+  categoryImages: File[];
+  categoryPreviews: string[];
+  onCategoryImageSelect: (files: File[]) => void;
+  onRemoveCategoryImage: (index: number) => void;
+  bannerImages: File[];
+  bannerPreviews: string[];
+  onBannerImageSelect: (files: File[]) => void;
+  onRemoveBannerImage: (index: number) => void;
+  thumbnailImages: File[];
+  thumbnailPreviews: string[];
+  onThumbnailImageSelect: (files: File[]) => void;
+  onRemoveThumbnailImage: (index: number) => void;
+  category?: any;
 }
 
-export function CategoryDetailsForm({ category }: CategoryDetailsFormProps) {
+export function CategoryDetailsForm({
+  formData,
+  onFormChange,
+  categoryImages,
+  categoryPreviews,
+  onCategoryImageSelect,
+  onRemoveCategoryImage,
+  bannerImages,
+  bannerPreviews,
+  onBannerImageSelect,
+  onRemoveBannerImage,
+  thumbnailImages,
+  thumbnailPreviews,
+  onThumbnailImageSelect,
+  onRemoveThumbnailImage,
+}: CategoryDetailsFormProps) {
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const { id, value, type } = e.target;
+    if (type === "checkbox" && e.target instanceof HTMLInputElement) {
+      onFormChange(id as keyof CategoryFormData, (e.target as HTMLInputElement).checked);
+    } else {
+      onFormChange(id as keyof CategoryFormData, value);
+    }
+  };
+
+  const handleSelectChange = (id: keyof CategoryFormData, value: string) => {
+    onFormChange(id, value);
+  };
+
   return (
     <div className="grid gap-6">
       <div className="grid gap-3">
@@ -24,7 +70,8 @@ export function CategoryDetailsForm({ category }: CategoryDetailsFormProps) {
             <Input
               id="name"
               placeholder="Enter category name"
-              defaultValue={category?.name || ""}
+              value={formData.name}
+              onChange={handleInputChange}
               className="border-gray-300"
               required
             />
@@ -36,7 +83,8 @@ export function CategoryDetailsForm({ category }: CategoryDetailsFormProps) {
             <Input
               id="slug"
               placeholder="url-friendly-name"
-              defaultValue={category?.slug || ""}
+              value={formData.slug}
+              onChange={handleInputChange}
               className="border-gray-300"
             />
             <p className="text-xs text-gray-500">Auto-generated from name if left blank. Used in URLs.</p>
@@ -47,7 +95,10 @@ export function CategoryDetailsForm({ category }: CategoryDetailsFormProps) {
           <Label htmlFor="parent" className="text-gray-700">
             Parent Category
           </Label>
-          <Select defaultValue={category?.parent || ""}>
+          <Select
+            value={formData.parent}
+            onValueChange={(val) => handleSelectChange("parent", val)}
+          >
             <SelectTrigger id="parent" className="border-gray-300">
               <SelectValue placeholder="Select parent category (optional)" />
             </SelectTrigger>
@@ -63,27 +114,28 @@ export function CategoryDetailsForm({ category }: CategoryDetailsFormProps) {
 
       <div className="grid gap-4 md:grid-cols-2">
         <div className="grid gap-3">
-          <Label className="text-gray-700">Category Image</Label>
-          <div className="flex h-32 cursor-pointer items-center justify-center rounded-md border border-dashed border-gray-300 bg-gray-50 hover:bg-gray-100">
-            <div className="flex flex-col items-center gap-1 text-gray-500">
-              <ImagePlus className="h-8 w-8" />
-              <span className="text-sm">Click to upload</span>
-              <span className="text-xs">SVG, PNG, JPG or GIF (max. 2MB)</span>
-            </div>
-            <input type="file" className="hidden" />
-          </div>
+          <CategoryImageUpload
+            label="Category Image"
+            onImageSelect={onCategoryImageSelect}
+            selectedImages={categoryImages}
+            previewImages={categoryPreviews}
+            onRemoveImage={onRemoveCategoryImage}
+            maxFiles={1}
+            className=""
+            inputId="category-image-upload"
+          />
         </div>
-
         <div className="grid gap-3">
-          <Label className="text-gray-700">Thumbnail Image (Optional)</Label>
-          <div className="flex h-32 cursor-pointer items-center justify-center rounded-md border border-dashed border-gray-300 bg-gray-50 hover:bg-gray-100">
-            <div className="flex flex-col items-center gap-1 text-gray-500">
-              <ImagePlus className="h-8 w-8" />
-              <span className="text-sm">Click to upload</span>
-              <span className="text-xs">Used in category previews</span>
-            </div>
-            <input type="file" className="hidden" />
-          </div>
+          <CategoryImageUpload
+            label="Thumbnail Image (Optional)"
+            onImageSelect={onThumbnailImageSelect}
+            selectedImages={thumbnailImages}
+            previewImages={thumbnailPreviews}
+            onRemoveImage={onRemoveThumbnailImage}
+            maxFiles={1}
+            className=""
+            inputId="thumbnail-image-upload"
+          />
         </div>
       </div>
 
@@ -94,10 +146,11 @@ export function CategoryDetailsForm({ category }: CategoryDetailsFormProps) {
             Short Description
           </Label>
           <Textarea
-            id="short-description"
+            id="shortDescription"
             placeholder="Enter a brief summary of the category"
             className="min-h-[80px] resize-y border-gray-300"
-            defaultValue={category?.shortDescription || ""}
+            value={formData.shortDescription}
+            onChange={handleInputChange}
           />
         </div>
 
@@ -106,10 +159,11 @@ export function CategoryDetailsForm({ category }: CategoryDetailsFormProps) {
             Full Description
           </Label>
           <Textarea
-            id="full-description"
+            id="fullDescription"
             placeholder="Enter detailed description of the category"
             className="min-h-[120px] resize-y border-gray-300"
-            defaultValue={category?.fullDescription || ""}
+            value={formData.fullDescription}
+            onChange={handleInputChange}
           />
         </div>
       </div>
@@ -121,7 +175,10 @@ export function CategoryDetailsForm({ category }: CategoryDetailsFormProps) {
             <Label htmlFor="visibility" className="text-gray-700">
               Visibility
             </Label>
-            <Select defaultValue={category?.status || "Visible"}>
+            <Select
+              value={formData.status}
+              onValueChange={(val) => handleSelectChange("status", val)}
+            >
               <SelectTrigger id="visibility" className="border-gray-300">
                 <SelectValue placeholder="Select visibility" />
               </SelectTrigger>
@@ -137,18 +194,23 @@ export function CategoryDetailsForm({ category }: CategoryDetailsFormProps) {
               Sort Order
             </Label>
             <Input
-              id="sort-order"
+              id="sortOrder"
               type="number"
               min="0"
               placeholder="0"
-              defaultValue={category?.sortOrder || "0"}
+              value={formData.sortOrder}
+              onChange={handleInputChange}
               className="border-gray-300"
             />
             <p className="text-xs text-gray-500">Lower numbers appear first</p>
           </div>
 
           <div className="flex items-center gap-2 pt-8">
-            <Switch id="featured" defaultChecked={category?.featured || false} />
+            <Switch
+              id="featured"
+              checked={formData.featured}
+              onCheckedChange={(checked) => onFormChange("featured", checked)}
+            />
             <Label htmlFor="featured" className="text-gray-700">
               Featured Category
             </Label>
@@ -163,7 +225,10 @@ export function CategoryDetailsForm({ category }: CategoryDetailsFormProps) {
             <Label htmlFor="display-type" className="text-gray-700">
               Display Type
             </Label>
-            <Select defaultValue={category?.displayType || "both"}>
+            <Select
+              value={formData.displayType}
+              onValueChange={(val) => handleSelectChange("displayType", val)}
+            >
               <SelectTrigger id="display-type" className="border-gray-300">
                 <SelectValue placeholder="Select display type" />
               </SelectTrigger>
@@ -176,15 +241,16 @@ export function CategoryDetailsForm({ category }: CategoryDetailsFormProps) {
           </div>
 
           <div className="grid gap-3">
-            <Label className="text-gray-700">Banner Image (Optional)</Label>
-            <div className="flex h-32 cursor-pointer items-center justify-center rounded-md border border-dashed border-gray-300 bg-gray-50 hover:bg-gray-100">
-              <div className="flex flex-col items-center gap-1 text-gray-500">
-                <ImagePlus className="h-8 w-8" />
-                <span className="text-sm">Click to upload</span>
-                <span className="text-xs">For category landing pages</span>
-              </div>
-              <input type="file" className="hidden" />
-            </div>
+            <CategoryImageUpload
+              label="Banner Image (Optional)"
+              onImageSelect={onBannerImageSelect}
+              selectedImages={bannerImages}
+              previewImages={bannerPreviews}
+              onRemoveImage={onRemoveBannerImage}
+              maxFiles={1}
+              className=""
+              inputId="banner-image-upload"
+            />
           </div>
         </div>
       </div>
