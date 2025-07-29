@@ -32,21 +32,23 @@ export interface Order {
 // Orders list response
 export interface OrdersListResponse {
     count: number;
+    totalOrders: number;
     orders: Order[];
 }
 
 export const ordersApi = baseApi.injectEndpoints({
     endpoints: (builder) => ({
-        getRecentOrders: builder.query<OrdersListResponse, { limit?: number }>({
-            query: ({ limit = 100 }) => ({
+        getRecentOrders: builder.query<OrdersListResponse, { page?: number; limit?: number }>({
+            query: ({ page = 1, limit = 10 }) => ({
                 url: '/api/dashboard/orders/recent',
                 method: 'GET',
-                params: { limit },
+                params: { page, limit },
                 credentials: 'include',
             }),
             providesTags: [{ type: 'Orders', id: 'LIST' }],
         }),
     }),
+    overrideExisting: true,
 });
 
 export const { useGetRecentOrdersQuery } = ordersApi;

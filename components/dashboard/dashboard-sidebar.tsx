@@ -178,23 +178,25 @@ export function DashboardSidebar() {
       <div className="flex h-16 items-center justify-between border-b border-gray-200 px-4">
         {isExpanded ? (
           <Link href="/" className="flex items-center gap-2">
-            <Image
-              src={`${API_URL}/image/catalog/Group%205680@2x.png`}
+            {/* <Image
+              // src={`${API_URL}/image/catalog/Group%205680@2x.png`}
+              src={''}
               alt="Anne Creations Logo"
               width={120}
               height={40}
               className="h-8 w-auto"
-              />
+              /> */}
           </Link>
         ) : (
           <div className="mx-auto">
-            <Image
-            src={`${API_URL}/image/catalog/Group%205680@2x.png`}
+            {/* <Image
+            // src={`${API_URL}/image/catalog/Group%205680@2x.png`}
+              src={''}
               alt="Anne Creations Logo"
               width={40}
               height={40}
               className="h-8 w-8 object-contain"
-            />
+            /> */}
           </div>
         )}
         <Button

@@ -1,5 +1,5 @@
 "use client"
-import { useState, useMemo } from "react"
+import { useState, useMemo , useEffect } from "react"
 import {
   ArrowDownIcon,
   ArrowUpIcon,
@@ -72,8 +72,12 @@ export function OrdersList() {
   // State for sorting
   const [sortField, setSortField] = useState<"id" | "customer" | "total" | "dateModified">("dateModified")
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc")
-  // Fetch orders from API
-  const { data, isLoading, isError } = useGetRecentOrdersQuery({ limit: 100 });
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(20);
+
+  // Fetch orders from API with pagination
+  const { data, isLoading, isError } = useGetRecentOrdersQuery({ page: currentPage, limit: itemsPerPage });
 
   // Map API response to local Order type
   const ordersData: Order[] = Array.isArray(data?.orders)
@@ -102,22 +106,26 @@ export function OrdersList() {
   const [searchQuery, setSearchQuery] = useState("")
   const [searchField, setSearchField] = useState<"all" | "id" | "customer" | "email" | "phone">("all")
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>(statuses)
+
+  // Sync selectedStatuses with statuses when API data changes
+  useEffect(() => {
+    // Only update selectedStatuses if contents actually changed
+    if (statuses.length !== selectedStatuses.length || !statuses.every((s) => selectedStatuses.includes(s))) {
+      setSelectedStatuses(statuses);
+    }
+  }, [statuses]);
   // Remove this state
   // const [selectedDevices, setSelectedDevices] = useState<string[]>(devices)
-
-  // State for pagination
-  const [currentPage, setCurrentPage] = useState(1)
-  const [itemsPerPage, setItemsPerPage] = useState(10)
 
   // Toggle sort direction or change sort field
   const handleSort = (field: "id" | "customer" | "total" | "dateModified") => {
     if (sortField === field) {
-      setSortDirection(sortDirection === "asc" ? "desc" : "asc")
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
     } else {
-      setSortField(field)
-      setSortDirection("asc")
+      setSortField(field);
+      setSortDirection("asc");
     }
-  }
+  };
 
   // Filter and sort orders
   const filteredAndSortedOrders = useMemo(() => {
@@ -162,17 +170,14 @@ export function OrdersList() {
       });
   }, [ordersData, sortField, sortDirection, searchQuery, searchField, selectedStatuses]);
 
-  // Calculate pagination
-  const totalPages = Math.ceil(filteredAndSortedOrders.length / itemsPerPage)
-  const paginatedOrders = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage
-    return filteredAndSortedOrders.slice(startIndex, startIndex + itemsPerPage)
-  }, [filteredAndSortedOrders, currentPage, itemsPerPage])
+  // Pagination from API response
+  const totalOrders = typeof data?.totalOrders === "number" ? data.totalOrders : ordersData.length;
+  const totalPages = Math.max(1, Math.ceil(totalOrders / itemsPerPage));
 
   // Handle page change
   const goToPage = (page: number) => {
-    setCurrentPage(Math.max(1, Math.min(page, totalPages)))
-  }
+    setCurrentPage(Math.max(1, Math.min(page, totalPages)));
+  };
 
   // Toggle status selection
   const toggleStatus = (status: string) => {
@@ -373,8 +378,8 @@ export function OrdersList() {
                     Failed to load orders.
                   </TableCell>
                 </TableRow>
-              ) : paginatedOrders.length > 0 ? (
-                paginatedOrders.map((order) => (
+              ) : filteredAndSortedOrders.length > 0 ? (
+                filteredAndSortedOrders.map((order) => (
                   <TableRow key={order.id} className="hover:bg-gray-50">
                     <TableCell className="font-medium text-gray-900">{order.id}</TableCell>
                     <TableCell className="text-gray-700">{order.product}</TableCell>
